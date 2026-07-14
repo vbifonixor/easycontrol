@@ -11,6 +11,7 @@ import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 
 import java.nio.ByteBuffer;
@@ -82,6 +83,18 @@ public class FullActivity extends Activity implements SensorEventListener {
 
   @Override
   public void onBackPressed() {
+  }
+
+  @Override
+  public boolean dispatchKeyEvent(KeyEvent event) {
+    if (clientController != null && clientController.handleGamepadKeyEvent(event)) return true;
+    return super.dispatchKeyEvent(event);
+  }
+
+  @Override
+  public boolean dispatchGenericMotionEvent(MotionEvent event) {
+    if (clientController != null && clientController.handleGamepadMotionEvent(event)) return true;
+    return super.dispatchGenericMotionEvent(event);
   }
 
   private void updateMaxSize() {

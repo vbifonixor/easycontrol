@@ -194,6 +194,15 @@ public final class Server {
           case 9:
             Device.changeResolution(mainInputStream.readInt(), mainInputStream.readInt());
             break;
+          case 10:
+            ControlPacket.handleUhidCreateEvent();
+            break;
+          case 11:
+            ControlPacket.handleUhidInputEvent();
+            break;
+          case 12:
+            ControlPacket.closeUhid(mainInputStream.readUnsignedShort());
+            break;
         }
       }
     } catch (Exception e) {
@@ -231,6 +240,7 @@ public final class Server {
             AudioEncode.release();
             break;
           case 2:
+            ControlPacket.closeAllUhid();
             Device.fallbackResolution();
             Device.fallbackScreenLightTimeout();
           case 3:

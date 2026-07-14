@@ -19,6 +19,7 @@ import com.daitj.easycontrolfork.app.databinding.ActivityMainBinding;
 import com.daitj.easycontrolfork.app.entity.AppData;
 import com.daitj.easycontrolfork.app.entity.Device;
 import com.daitj.easycontrolfork.app.helper.DeviceListAdapter;
+import com.daitj.easycontrolfork.app.helper.ExternalStream;
 import com.daitj.easycontrolfork.app.helper.MyBroadcastReceiver;
 import com.daitj.easycontrolfork.app.helper.ViewTools;
 
@@ -49,10 +50,17 @@ public class MainActivity extends Activity {
     myBroadcastReceiver.register(this);
     // 重置已连接设备
     myBroadcastReceiver.resetUSB();
-    // 自启动设备
-    AppData.uiHandler.postDelayed(() -> {
+    if (ExternalStream.isExternalLaunch(getIntent())) startExternalStream(getIntent());
+    else AppData.uiHandler.postDelayed(() -> {
       for (Device device : AdbTools.devicesList) if (device.connectOnStart) Client.startDevice(device);
     }, 2000);
+  }
+
+  @Override
+  protected void onNewIntent(Intent intent) {
+    super.onNewIntent(intent);
+    setIntent(intent);
+    if (ExternalStream.isExternalLaunch(intent)) startExternalStream(intent);
   }
 
   @Override
@@ -65,6 +73,11 @@ public class MainActivity extends Activity {
   private void setButtonListener() {
     activityMainBinding.buttonAdd.setOnClickListener(v -> startActivity(new Intent(this, DeviceDetailActivity.class)));
     activityMainBinding.buttonSet.setOnClickListener(v -> startActivity(new Intent(this, SetActivity.class)));
+  }
+
+  private void startExternalStream(Intent intent) {
+    if (!ExternalStream.shouldConnect(intent)) return;
+    Client.startDevice(ExternalStream.createDevice(intent));
   }
 
   @Override

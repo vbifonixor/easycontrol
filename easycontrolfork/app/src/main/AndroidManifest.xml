@@ -31,6 +31,22 @@
         android:resource="@xml/device_filter" />
     </activity>
     <activity
+      android:name=".ExternalStreamActivity"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="com.vbifonix.easycontrolfork.action.CONNECT" />
+        <category android:name="android.intent.category.DEFAULT" />
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data
+          android:scheme="easycontrol"
+          android:host="connect" />
+      </intent-filter>
+    </activity>
+    <activity
       android:name=".DeviceDetailActivity"
       android:exported="false" />
     <activity

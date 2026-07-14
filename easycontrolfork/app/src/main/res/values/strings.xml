@@ -32,6 +32,8 @@
 
   <!-- 设备添加页面 -->
   <string name="device_uuid">Touch to copy ID</string>
+  <string name="device_copy_deeplink">Copy deep link</string>
+  <string name="device_copy_termux">Copy Termux command</string>
   <string name="device_name">Name</string>
   <string name="device_name_hint">Can NOT be empty</string>
   <string name="device_address">Address</string>

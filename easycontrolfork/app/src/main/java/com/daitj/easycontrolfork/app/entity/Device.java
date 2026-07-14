@@ -32,6 +32,7 @@ public class Device {
   public boolean lockOnClose = true;
   public boolean lightOnClose = false;
   public boolean reconnectOnClose = false;
+  public boolean closeAppOnClose = false;
   public int customResolutionWidth = 1080;
   public int customResolutionHeight = 2400;
   public int smallX = 200;

@@ -53,6 +53,7 @@ jobs:
           MY_KEY_ALIAS=$KEY_ALIAS
           MY_KEY_PASSWORD=$KEY_PASSWORD
           EOF
+          keytool -list -keystore release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null
       - name: Bump app version
         run: |
           sed -i -E "s/versionCode [0-9]+/versionCode ${{ inputs.version_code }}/" app/build.gradle
@@ -70,7 +71,7 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app/build.gradle app/src/main/res/raw/easycontrolfork_server.jar
+          git add app/build.gradle
           git commit -m "release: v${{ inputs.version_name }}"
           git push
       - name: Create GitHub release

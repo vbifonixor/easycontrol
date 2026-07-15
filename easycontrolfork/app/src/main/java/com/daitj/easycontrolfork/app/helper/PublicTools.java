@@ -174,7 +174,8 @@ public class PublicTools {
   // 扫描局域网设备
   public static ArrayList<String> scanAddress() {
     ArrayList<String> scannedAddresses = new ArrayList<>();
-    ExecutorService executor = Executors.newFixedThreadPool(256);
+    ArrayList<String> results = new ArrayList<>();
+    ExecutorService executor = Executors.newFixedThreadPool(32);
     ArrayList<String> ipv4List = getLocalIp().first;
     for (String ipv4 : ipv4List) {
       Matcher matcher = Pattern.compile("(\\d+\\.\\d+\\.\\d+)").matcher(ipv4);
@@ -183,12 +184,12 @@ public class PublicTools {
         for (int i = 1; i <= 255; i++) {
           String host = subnet + "." + i;
           executor.execute(() -> {
-            try {
-              Socket socket = new Socket();
+            try (Socket socket = new Socket()) {
               socket.connect(new InetSocketAddress(host, 5555), 800);
-              socket.close();
               // 标注本机
-              scannedAddresses.add(host + (host.equals(ipv4) ? " (" + AppData.applicationContext.getString(R.string.main_scan_device_local) + ")" : ""));
+              synchronized (results) {
+                results.add(host + (host.equals(ipv4) ? " (" + AppData.applicationContext.getString(R.string.main_scan_device_local) + ")" : ""));
+              }
             } catch (Exception ignored) {
             }
           });
@@ -197,10 +198,13 @@ public class PublicTools {
     }
     executor.shutdown();
     try {
-      while (!executor.awaitTermination(1, TimeUnit.SECONDS)) {
-      }
+      executor.awaitTermination(30, TimeUnit.SECONDS);
     } catch (InterruptedException ignored) {
+      Thread.currentThread().interrupt();
+    } finally {
+      executor.shutdownNow();
     }
+    scannedAddresses.addAll(results);
     return scannedAddresses;
   }
 

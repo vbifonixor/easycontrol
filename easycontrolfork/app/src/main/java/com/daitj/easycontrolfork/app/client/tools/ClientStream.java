@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.daitj.easycontrolfork.app.BuildConfig;
 import com.daitj.easycontrolfork.app.R;
@@ -16,8 +17,10 @@ import com.daitj.easycontrolfork.app.entity.AppData;
 import com.daitj.easycontrolfork.app.entity.Device;
 import com.daitj.easycontrolfork.app.entity.MyInterface;
 import com.daitj.easycontrolfork.app.helper.PublicTools;
+import com.daitj.easycontrolfork.app.helper.ExternalStream;
 
 public class ClientStream {
+  private static final int MAX_FRAME_SIZE = 32 * 1024 * 1024;
   private boolean isClose = false;
   private boolean connectDirect = false;
   private Adb adb;
@@ -37,12 +40,16 @@ public class ClientStream {
   private static final int timeoutDelay = 1000 * 15;
 
   public ClientStream(Device device, MyInterface.MyFunctionBoolean handle) {
+    AtomicBoolean completed = new AtomicBoolean();
     // 超时
     Thread timeOutThread = new Thread(() -> {
       try {
         Thread.sleep(timeoutDelay);
         PublicTools.logToast("stream", AppData.applicationContext.getString(R.string.toast_timeout), true);
-        handle.run(false);
+        if (completed.compareAndSet(false, true)) {
+          close();
+          handle.run(false);
+        }
         if (connectThread != null) connectThread.interrupt();
       } catch (InterruptedException ignored) {
       }
@@ -53,10 +60,13 @@ public class ClientStream {
         adb = AdbTools.connectADB(device);
         startServer(device);
         connectServer(device);
-        handle.run(true);
+        if (completed.compareAndSet(false, true)) handle.run(true);
       } catch (Exception e) {
         PublicTools.logToast("stream", e.toString(), true);
-        handle.run(false);
+        if (completed.compareAndSet(false, true)) {
+          close();
+          handle.run(false);
+        }
       } finally {
         timeOutThread.interrupt();
       }
@@ -82,7 +92,7 @@ public class ClientStream {
       + " keepAwake=" + (device.keepWakeOnRunning ? 1 : 0)
       + " supportH265=" + ((device.useH265 && supportH265) ? 1 : 0)
       + " supportOpus=" + (supportOpus ? 1 : 0)
-      + " startApp=" + device.startApp + " \n").getBytes()));
+      + " startApp=" + ExternalStream.sanitizeStartApp(device.startApp) + " \n").getBytes()));
   }
 
   // 连接Server
@@ -90,33 +100,6 @@ public class ClientStream {
     Thread.sleep(50);
     int reTry = 40;
     int reTryTime = timeoutDelay / reTry;
-    if (!device.isLinkDevice()) {
-      long startTime = System.currentTimeMillis();
-      boolean mainConn = false;
-      InetSocketAddress inetSocketAddress = new InetSocketAddress(PublicTools.getIp(device.address), device.serverPort);
-      for (int i = 0; i < reTry; i++) {
-        try {
-          if (!mainConn) {
-            mainSocket = new Socket();
-            mainSocket.connect(inetSocketAddress, timeoutDelay / 2);
-            mainConn = true;
-          }
-          videoSocket = new Socket();
-          videoSocket.connect(inetSocketAddress, timeoutDelay / 2);
-          mainOutputStream = mainSocket.getOutputStream();
-          mainDataInputStream = new DataInputStream(mainSocket.getInputStream());
-          videoDataInputStream = new DataInputStream(videoSocket.getInputStream());
-          connectDirect = true;
-          return;
-        } catch (Exception ignored) {
-          if (mainSocket != null) mainSocket.close();
-          if (videoSocket != null) videoSocket.close();
-          // 如果超时，直接跳出循环
-          if (System.currentTimeMillis() - startTime >= timeoutDelay / 2 - 1000) i = reTry;
-          else Thread.sleep(reTryTime);
-        }
-      }
-    }
     // 直连失败尝试ADB中转
     for (int i = 0; i < reTry; i++) {
       try {
@@ -156,6 +139,7 @@ public class ClientStream {
   }
 
   public ByteBuffer readByteArrayFromMain(int size) throws IOException, InterruptedException {
+    if (size < 0 || size > MAX_FRAME_SIZE) throw new IOException("Invalid main frame size: " + size);
     if (connectDirect) {
       byte[] buffer = new byte[size];
       mainDataInputStream.readFully(buffer);
@@ -164,6 +148,7 @@ public class ClientStream {
   }
 
   public ByteBuffer readByteArrayFromVideo(int size) throws IOException, InterruptedException {
+    if (size < 0 || size > MAX_FRAME_SIZE) throw new IOException("Invalid video frame size: " + size);
     if (connectDirect) {
       byte[] buffer = new byte[size];
       videoDataInputStream.readFully(buffer);
@@ -202,8 +187,8 @@ public class ClientStream {
       } catch (Exception ignored) {
       }
     } else {
-      mainBufferStream.close();
-      videoBufferStream.close();
+      if (mainBufferStream != null) mainBufferStream.close();
+      if (videoBufferStream != null) videoBufferStream.close();
     }
   }
 }

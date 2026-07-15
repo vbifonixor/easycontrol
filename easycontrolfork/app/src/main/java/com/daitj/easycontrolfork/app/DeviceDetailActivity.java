@@ -22,6 +22,7 @@ import com.daitj.easycontrolfork.app.databinding.ItemTextBinding;
 import com.daitj.easycontrolfork.app.entity.AppData;
 import com.daitj.easycontrolfork.app.entity.Device;
 import com.daitj.easycontrolfork.app.helper.MyBroadcastReceiver;
+import com.daitj.easycontrolfork.app.helper.ExternalStream;
 import com.daitj.easycontrolfork.app.helper.PublicTools;
 import com.daitj.easycontrolfork.app.helper.ViewTools;
 
@@ -105,6 +106,8 @@ public class DeviceDetailActivity extends Activity {
   private void setListener() {
     activityDeviceDetailBinding.backButton.setOnClickListener(v -> finish());
     activityDeviceDetailBinding.buttonScan.setOnClickListener(v -> scanAddress());
+    activityDeviceDetailBinding.buttonCopyDeeplink.setOnClickListener(v -> copyExternalStream(false));
+    activityDeviceDetailBinding.buttonCopyTermux.setOnClickListener(v -> copyExternalStream(true));
     // 设置确认按钮监听
     activityDeviceDetailBinding.ok.setOnClickListener(v -> {
       String name = String.valueOf(activityDeviceDetailBinding.name.getText());
@@ -135,6 +138,28 @@ public class DeviceDetailActivity extends Activity {
       sendBroadcast(intent);
       finish();
     });
+  }
+
+  private void copyExternalStream(boolean termux) {
+    Device exportDevice = device.clone(UUID.randomUUID().toString());
+    exportDevice.address = String.valueOf(activityDeviceDetailBinding.address.getText());
+    exportDevice.startApp = String.valueOf(activityDeviceDetailBinding.startApp.getText());
+    exportDevice.adbPort = getInt(activityDeviceDetailBinding.adbPort.getText().toString(), exportDevice.adbPort);
+    exportDevice.serverPort = getInt(activityDeviceDetailBinding.serverPort.getText().toString(), exportDevice.serverPort);
+    exportDevice.customResolutionOnConnect = activityDeviceDetailBinding.customResolution.getVisibility() != View.GONE;
+    exportDevice.customResolutionWidth = getInt(activityDeviceDetailBinding.customResolutionWidth.getText().toString(), exportDevice.customResolutionWidth);
+    exportDevice.customResolutionHeight = getInt(activityDeviceDetailBinding.customResolutionHeight.getText().toString(), exportDevice.customResolutionHeight);
+    String text = termux ? ExternalStream.createActivityCommand(exportDevice) : ExternalStream.createUri(exportDevice);
+    AppData.clipBoard.setPrimaryClip(ClipData.newPlainText(ClipDescription.MIMETYPE_TEXT_PLAIN, text));
+    Toast.makeText(this, getString(R.string.toast_copy), Toast.LENGTH_SHORT).show();
+  }
+
+  private static int getInt(String value, int defaultValue) {
+    try {
+      return Integer.parseInt(value);
+    } catch (NumberFormatException ignored) {
+      return defaultValue;
+    }
   }
 
   // 扫描局域网地址

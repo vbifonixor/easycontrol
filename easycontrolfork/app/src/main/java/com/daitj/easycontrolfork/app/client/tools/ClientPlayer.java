@@ -87,6 +87,6 @@ public class ClientPlayer {
     isClose = true;
     mainStreamInThread.interrupt();
     videoStreamInThread.interrupt();
-    playHandlerThread.interrupt();
+    playHandlerThread.quitSafely();
   }
 }

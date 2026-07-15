@@ -50,7 +50,7 @@ public final class Options {
           supportOpus = Integer.parseInt(value) == 1;
           break;
         case "startApp":
-          startApp = value;
+          startApp = value.matches("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+") ? value : "";
           break;
       }
     }

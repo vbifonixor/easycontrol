@@ -1,0 +1,82 @@
+name: Android Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: Release version, for example 1.0.5
+        required: true
+        type: string
+      version_code:
+        description: Monotonically increasing Android version code
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: easycontrolfork
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Validate version inputs
+        run: |
+          [[ '${{ inputs.version_name }}' =~ ^[0-9]+(\.[0-9]+){1,3}([-.][0-9A-Za-z.-]+)?$ ]]
+          [[ '${{ inputs.version_code }}' =~ ^[1-9][0-9]*$ ]]
+      - name: Configure release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > release.jks
+          cat > ../keystore.properties <<EOF
+          MY_KEYSTORE_FILE=release.jks
+          MY_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD
+          MY_KEY_ALIAS=$KEY_ALIAS
+          MY_KEY_PASSWORD=$KEY_PASSWORD
+          EOF
+      - name: Bump app version
+        run: |
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ inputs.version_code }}/" app/build.gradle
+          sed -i -E "s/versionName \"[^\"]+\"/versionName \"${{ inputs.version_name }}\"/" app/build.gradle
+      - name: Build bundled release server JAR
+        run: ./gradlew :server:copyRelease
+      - name: Build signed release APK
+        run: ./gradlew :app:assembleRelease
+      - name: Prepare Obtainium release assets
+        run: |
+          mkdir release
+          cp app/build/outputs/apk/release/app-release.apk "release/EasyControlFork-${{ inputs.version_name }}.apk"
+          (cd release && sha256sum *.apk > SHA256SUMS.txt)
+      - name: Commit version bump
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app/build.gradle app/src/main/res/raw/easycontrolfork_server.jar
+          git commit -m "release: v${{ inputs.version_name }}"
+          git push
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ inputs.version_name }}" release/*.apk release/SHA256SUMS.txt \
+            --title "EasyControlFork v${{ inputs.version_name }}" \
+            --generate-notes

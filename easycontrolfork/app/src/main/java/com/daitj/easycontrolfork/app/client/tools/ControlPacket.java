@@ -100,4 +100,38 @@ public final class ControlPacket {
     return byteBuffer;
   }
 
+  public static ByteBuffer createUhidCreateEvent(int id, int vendorId, int productId, String name, byte[] descriptor) {
+    byte[] nameBytes = name.getBytes(StandardCharsets.UTF_8);
+    int nameLength = Math.min(nameBytes.length, 127);
+    ByteBuffer byteBuffer = ByteBuffer.allocate(10 + nameLength + descriptor.length);
+    byteBuffer.put((byte) 10);
+    byteBuffer.putShort((short) id);
+    byteBuffer.putShort((short) vendorId);
+    byteBuffer.putShort((short) productId);
+    byteBuffer.put((byte) nameLength);
+    byteBuffer.put(nameBytes, 0, nameLength);
+    byteBuffer.putShort((short) descriptor.length);
+    byteBuffer.put(descriptor);
+    byteBuffer.flip();
+    return byteBuffer;
+  }
+
+  public static ByteBuffer createUhidInputEvent(int id, ByteBuffer report) {
+    ByteBuffer byteBuffer = ByteBuffer.allocate(5 + report.remaining());
+    byteBuffer.put((byte) 11);
+    byteBuffer.putShort((short) id);
+    byteBuffer.putShort((short) report.remaining());
+    byteBuffer.put(report);
+    byteBuffer.flip();
+    return byteBuffer;
+  }
+
+  public static ByteBuffer createUhidDestroyEvent(int id) {
+    ByteBuffer byteBuffer = ByteBuffer.allocate(3);
+    byteBuffer.put((byte) 12);
+    byteBuffer.putShort((short) id);
+    byteBuffer.flip();
+    return byteBuffer;
+  }
+
 }

@@ -416,12 +416,33 @@
           android:visibility="gone" />
       </LinearLayout>
 
+      <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="30dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <Button
+          android:id="@+id/button_copy_deeplink"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="@string/device_copy_deeplink" />
+
+        <Button
+          android:id="@+id/button_copy_termux"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_marginStart="10dp"
+          android:text="@string/device_copy_termux" />
+      </LinearLayout>
+
       <Button
         android:id="@+id/ok"
         android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="30dp"
+        android:layout_marginTop="10dp"
         android:layout_marginBottom="60dp"
         android:background="@drawable/background_cron"
         android:backgroundTint="@color/button"

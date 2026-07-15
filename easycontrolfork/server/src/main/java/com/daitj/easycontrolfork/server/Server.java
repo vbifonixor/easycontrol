@@ -13,6 +13,7 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -119,7 +120,7 @@ public final class Server {
   }
 
   private static void connectClient() throws IOException {
-    try (ServerSocket serverSocket = new ServerSocket(Options.serverPort)) {
+    try (ServerSocket serverSocket = new ServerSocket(Options.serverPort, 2, InetAddress.getLoopbackAddress())) {
       mainSocket = serverSocket.accept();
       videoSocket = serverSocket.accept();
       mainOutputStream = mainSocket.getOutputStream();
@@ -194,6 +195,15 @@ public final class Server {
           case 9:
             Device.changeResolution(mainInputStream.readInt(), mainInputStream.readInt());
             break;
+          case 10:
+            ControlPacket.handleUhidCreateEvent();
+            break;
+          case 11:
+            ControlPacket.handleUhidInputEvent();
+            break;
+          case 12:
+            ControlPacket.closeUhid(mainInputStream.readUnsignedShort());
+            break;
         }
       }
     } catch (Exception e) {
@@ -231,6 +241,7 @@ public final class Server {
             AudioEncode.release();
             break;
           case 2:
+            ControlPacket.closeAllUhid();
             Device.fallbackResolution();
             Device.fallbackScreenLightTimeout();
           case 3:

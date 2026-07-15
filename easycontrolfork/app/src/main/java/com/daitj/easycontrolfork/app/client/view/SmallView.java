@@ -63,6 +63,8 @@ public class SmallView extends ViewOutlineProvider {
     setBarListener();
     setButtonListener();
     setKeyEvent();
+    smallView.getRoot().setOnKeyHandle(clientController::handleGamepadKeyEvent);
+    smallView.getRoot().setOnGenericMotionHandle(clientController::handleGamepadMotionEvent);
     // 设置圆角
     smallView.body.setOutlineProvider(this);
     smallView.body.setClipToOutline(true);

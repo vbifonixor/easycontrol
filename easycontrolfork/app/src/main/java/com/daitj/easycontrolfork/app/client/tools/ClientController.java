@@ -12,6 +12,7 @@ import android.os.HandlerThread;
 import android.provider.Settings;
 import android.util.Pair;
 import android.view.Display;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.TextureView;
 import android.view.ViewGroup;
@@ -40,6 +41,7 @@ public class ClientController implements TextureView.SurfaceTextureListener {
   private final ClientStream clientStream;
   private final MyInterface.MyFunction handle;
   private final TextureView textureView = new TextureView(AppData.applicationContext);
+  private final GamepadController gamepadController;
   private SurfaceTexture surfaceTexture;
 
   private SmallView smallView;
@@ -58,6 +60,7 @@ public class ClientController implements TextureView.SurfaceTextureListener {
     this.device = device;
     this.clientStream = clientStream;
     this.handle = handle;
+    gamepadController = new GamepadController(packet -> handleAction("writeByteBuffer", packet, 0));
     mainThread.start();
     mainHandler = new Handler(mainThread.getLooper());
     textureView.setSurfaceTextureListener(this);
@@ -165,6 +168,14 @@ public class ClientController implements TextureView.SurfaceTextureListener {
     return textureView;
   }
 
+  public boolean handleGamepadKeyEvent(KeyEvent event) {
+    return gamepadController.handleKeyEvent(event);
+  }
+
+  public boolean handleGamepadMotionEvent(MotionEvent event) {
+    return gamepadController.handleMotionEvent(event);
+  }
+
   private synchronized void changeToFull() {
     hide();
     Intent intent = new Intent(AppData.mainActivity, FullActivity.class);
@@ -237,6 +248,7 @@ public class ClientController implements TextureView.SurfaceTextureListener {
 
   public void close() {
     hide();
+    gamepadController.close();
     mainThread.quitSafely();
     if (surfaceTexture != null) surfaceTexture.release();
   }

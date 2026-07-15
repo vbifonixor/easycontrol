@@ -11,6 +11,8 @@ import com.daitj.easycontrolfork.server.Server;
 import com.daitj.easycontrolfork.server.entity.Device;
 
 public final class ControlPacket {
+  private static final int MAX_CLIPBOARD_BYTES = 1024 * 1024;
+  private static final UhidManager uhidManager = new UhidManager();
 
   public static void sendVideoEvent(long pts, ByteBuffer data) throws IOException {
     int size = data.remaining() + 8;
@@ -75,10 +77,48 @@ public final class ControlPacket {
 
   public static void handleClipboardEvent() throws IOException {
     int size = Server.mainInputStream.readInt();
+    if (size < 0 || size > MAX_CLIPBOARD_BYTES) throw new IOException("Invalid clipboard size: " + size);
     byte[] textBytes = new byte[size];
     Server.mainInputStream.readFully(textBytes);
     String text = new String(textBytes, StandardCharsets.UTF_8);
     Device.setClipboardText(text);
+  }
+
+  public static void handleUhidCreateEvent() throws IOException {
+    int id = Server.mainInputStream.readUnsignedShort();
+    int vendorId = Server.mainInputStream.readUnsignedShort();
+    int productId = Server.mainInputStream.readUnsignedShort();
+    int nameSize = Server.mainInputStream.readUnsignedByte();
+    byte[] name = new byte[nameSize];
+    Server.mainInputStream.readFully(name);
+    int descriptorSize = Server.mainInputStream.readUnsignedShort();
+    if (descriptorSize > 4096) throw new IOException("UHID descriptor too large");
+    byte[] descriptor = new byte[descriptorSize];
+    Server.mainInputStream.readFully(descriptor);
+    try {
+      uhidManager.open(id, vendorId, productId, new String(name, StandardCharsets.UTF_8), descriptor);
+    } catch (IOException ignored) {
+    }
+  }
+
+  public static void handleUhidInputEvent() throws IOException {
+    int id = Server.mainInputStream.readUnsignedShort();
+    int reportSize = Server.mainInputStream.readUnsignedShort();
+    if (reportSize > 4096) throw new IOException("UHID report too large");
+    byte[] report = new byte[reportSize];
+    Server.mainInputStream.readFully(report);
+    try {
+      uhidManager.writeInput(id, report);
+    } catch (IOException ignored) {
+    }
+  }
+
+  public static void closeUhid(int id) {
+    uhidManager.close(id);
+  }
+
+  public static void closeAllUhid() {
+    uhidManager.closeAll();
   }
 
 }

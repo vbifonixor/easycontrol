@@ -105,6 +105,10 @@ public class Client {
       PublicTools.logToast("Client", new String(byteBuffer.array()), true);
       if (device.reconnectOnClose) startDevice(device);
     }
+    if (device.closeAppOnClose && byteBuffer == null) AppData.uiHandler.post(() -> {
+      AppData.mainActivity.finishAndRemoveTask();
+      android.os.Process.killProcess(android.os.Process.myPid());
+    });
   }
 
 }

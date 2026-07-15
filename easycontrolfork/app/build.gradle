@@ -7,7 +7,7 @@ def keystoreProperties = new Properties()
 keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
 android {
-  namespace 'com.vbifonix.easycontrolfork.app'
+  namespace 'com.daitj.easycontrolfork.app'
   compileSdk 34
 
   defaultConfig {

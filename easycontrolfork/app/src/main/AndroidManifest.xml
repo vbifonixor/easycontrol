@@ -13,6 +13,7 @@
     android:icon="${app_icon}"
     android:installLocation="internalOnly"
     android:label="${app_name}"
+    android:allowBackup="false"
     android:roundIcon="${app_icon_round}"
     android:supportsRtl="true"
     android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
@@ -60,9 +61,6 @@
       android:exported="false" />
     <activity
       android:name=".AdbKeyActivity"
-      android:exported="false" />
-    <activity
-      android:name=".ActiveActivity"
       android:exported="false" />
     <activity
       android:name=".UsbActivity"

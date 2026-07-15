@@ -10,7 +10,6 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.Build;
 
-import java.nio.ByteBuffer;
 import java.util.Map;
 
 import com.daitj.easycontrolfork.app.adb.UsbChannel;
@@ -24,7 +23,6 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
   public static final String ACTION_UPDATE_USB = "com.daitj.easycontrolfork.app.UPDATE_USB";
   private static final String ACTION_USB_PERMISSION = "com.daitj.easycontrolfork.app.USB_PERMISSION";
   public static final String ACTION_UPDATE_DEVICE_LIST = "com.daitj.easycontrolfork.app.UPDATE_DEVICE_LIST";
-  public static final String ACTION_CONTROL = "com.daitj.easycontrolfork.app.CONTROL";
   private static final String ACTION_SCREEN_OFF = "android.intent.action.SCREEN_OFF";
 
   private DeviceListAdapter deviceListAdapter;
@@ -38,7 +36,6 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
     filter.addAction(ACTION_USB_PERMISSION);
     filter.addAction(ACTION_UPDATE_USB);
     filter.addAction(ACTION_UPDATE_DEVICE_LIST);
-    filter.addAction(ACTION_CONTROL);
     filter.addAction(ACTION_SCREEN_OFF);
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) context.registerReceiver(this, filter, Context.RECEIVER_EXPORTED);
     else context.registerReceiver(this, filter);
@@ -55,7 +52,6 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
     else if (ACTION_UPDATE_USB.equals(action) || ACTION_USB_PERMISSION.equals(action) || UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) updateUSB();
     else if (ACTION_SCREEN_OFF.equals(action)) handleScreenOff();
     else if (ACTION_UPDATE_DEVICE_LIST.equals(action)) deviceListAdapter.update();
-    else if (ACTION_CONTROL.equals(action)) handleControl(intent);
   }
 
 
@@ -65,17 +61,6 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
 
   private void handleScreenOff() {
     for (Device device : AdbTools.devicesList) Client.sendAction(device.uuid, "close", null, 0);
-  }
-
-  private void handleControl(Intent intent) {
-    String action = intent.getStringExtra("action");
-    String uuid = intent.getStringExtra("uuid");
-    if (action == null || uuid == null) return;
-    if (action.equals("runShell")) {
-      String cmd = intent.getStringExtra("cmd");
-      if (cmd == null) return;
-      Client.sendAction(uuid, action, ByteBuffer.wrap(cmd.getBytes()), 0);
-    } else Client.sendAction(uuid, action, null, 0);
   }
 
   // 请求USB设备权限

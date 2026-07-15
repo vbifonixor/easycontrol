@@ -32,7 +32,7 @@ public class UsbChannel implements AdbChannel {
     // 连接USB设备
     if (AppData.usbManager == null) throw new IOException("not have usbManager");
     usbConnection = AppData.usbManager.openDevice(usbDevice);
-    if (usbConnection == null) return;
+    if (usbConnection == null) throw new IOException("unable to open USB device");
     // 查找ADB的接口
     for (int i = 0; i < usbDevice.getInterfaceCount(); i++) {
       UsbInterface tmpUsbInterface = usbDevice.getInterface(i);
@@ -41,7 +41,10 @@ public class UsbChannel implements AdbChannel {
         break;
       }
     }
-    if (usbInterface == null) return;
+    if (usbInterface == null) {
+      usbConnection.close();
+      throw new IOException("ADB USB interface not found");
+    }
     // 宣告独占接口
     if (usbConnection.claimInterface(usbInterface, true)) {
       // 查找输入输出端点
@@ -57,6 +60,8 @@ public class UsbChannel implements AdbChannel {
         }
       }
     }
+    usbConnection.releaseInterface(usbInterface);
+    usbConnection.close();
     throw new IOException("有线连接错误");
   }
 
@@ -64,16 +69,18 @@ public class UsbChannel implements AdbChannel {
   public void write(ByteBuffer data) throws IOException {
     // 此处感谢群友：○_○ 的帮助，ADB通过USB连接时必须头部和载荷分开发送，否则会导致ADB连接重置（官方的实现真差劲，明明可以顺序读取的）
     while (data.remaining() > 0) {
+      if (data.remaining() < AdbProtocol.ADB_HEADER_LENGTH) throw new IOException("truncated ADB USB packet");
       // 读取头部
       byte[] header = new byte[AdbProtocol.ADB_HEADER_LENGTH];
       data.get(header);
-      usbConnection.bulkTransfer(endpointOut, header, header.length, 1000);
+      if (usbConnection.bulkTransfer(endpointOut, header, header.length, 1000) != header.length) throw new IOException("failed to write ADB USB header");
       // 读取载荷
       int payloadLength = ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN).getInt(12);
+      if (payloadLength < 0 || payloadLength > AdbProtocol.MAX_PAYLOAD_SIZE || payloadLength > data.remaining()) throw new IOException("invalid ADB USB payload length");
       if (payloadLength > 0) {
         byte[] payload = new byte[payloadLength];
         data.get(payload);
-        usbConnection.bulkTransfer(endpointOut, payload, payload.length, 1000);
+        if (usbConnection.bulkTransfer(endpointOut, payload, payload.length, 1000) != payload.length) throw new IOException("failed to write ADB USB payload");
       }
     }
   }
@@ -92,6 +99,7 @@ public class UsbChannel implements AdbChannel {
         sourceBuffer.write(header);
         // 读取载荷
         int payloadLength = header.getInt(12);
+        if (payloadLength < 0 || payloadLength > AdbProtocol.MAX_PAYLOAD_SIZE) throw new IOException("invalid ADB USB payload length");
         if (payloadLength > 0) {
           ByteBuffer payload = readRequest(payloadLength);
           sourceBuffer.write(payload);

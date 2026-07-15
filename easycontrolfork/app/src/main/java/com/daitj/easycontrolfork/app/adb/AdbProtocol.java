@@ -23,6 +23,7 @@ public class AdbProtocol {
   // 最大数据大小一般为1024*1024，此处设置为15*1024，是因为有些设备USB仅支持最大16*1024，所以如果ADB使用了过大的数据，会导致USB无法传输，丢失数据，所以限制ADB协议最大为15k
   // 旧版本的adb服务端硬编码maxdata=4096，若设备实在太老，可尝试将此处修改为4096
   public static final int CONNECT_MAXDATA = 15 * 1024;
+  public static final int MAX_PAYLOAD_SIZE = 1024 * 1024;
 
   public static final byte[] CONNECT_PAYLOAD = "host::\0".getBytes();
 
@@ -98,6 +99,7 @@ public class AdbProtocol {
     public int arg0;
     public int arg1;
     public int payloadLength;
+    public int checksum;
     public ByteBuffer payload = null;
 
     public static AdbMessage parseAdbMessage(AdbChannel channel) throws IOException, InterruptedException {
@@ -108,9 +110,15 @@ public class AdbProtocol {
       msg.arg0 = buffer.getInt();
       msg.arg1 = buffer.getInt();
       msg.payloadLength = buffer.getInt();
-//      msg.checksum = buffer.getInt();
-//      msg.magic = buffer.getInt();
-      if (msg.payloadLength > 0) msg.payload = channel.read(msg.payloadLength);
+      msg.checksum = buffer.getInt();
+      int magic = buffer.getInt();
+      if (magic != ~msg.command) throw new IOException("Invalid ADB message magic");
+      if (msg.payloadLength < 0 || msg.payloadLength > MAX_PAYLOAD_SIZE) throw new IOException("Invalid ADB payload length: " + msg.payloadLength);
+      if (msg.payloadLength > 0) {
+        msg.payload = channel.read(msg.payloadLength);
+        byte[] payload = msg.payload.array();
+        if (payloadChecksum(payload) != msg.checksum) throw new IOException("Invalid ADB payload checksum");
+      } else if (msg.checksum != 0) throw new IOException("Invalid empty ADB payload checksum");
 
       return msg;
     }

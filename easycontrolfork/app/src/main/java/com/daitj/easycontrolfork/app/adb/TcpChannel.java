@@ -1,6 +1,7 @@
 package com.daitj.easycontrolfork.app.adb;
 
 import java.io.IOException;
+import java.io.EOFException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
@@ -33,7 +34,7 @@ public class TcpChannel implements AdbChannel {
     int bytesRead = 0;
     while (bytesRead < size) {
       int read = inputStream.read(buffer, bytesRead, size - bytesRead);
-      if (read == -1) break;
+      if (read == -1) throw new EOFException("ADB connection closed");
       bytesRead += read;
     }
     return ByteBuffer.wrap(buffer);

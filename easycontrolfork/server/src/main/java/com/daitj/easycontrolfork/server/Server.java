@@ -13,6 +13,7 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -119,7 +120,7 @@ public final class Server {
   }
 
   private static void connectClient() throws IOException {
-    try (ServerSocket serverSocket = new ServerSocket(Options.serverPort)) {
+    try (ServerSocket serverSocket = new ServerSocket(Options.serverPort, 2, InetAddress.getLoopbackAddress())) {
       mainSocket = serverSocket.accept();
       videoSocket = serverSocket.accept();
       mainOutputStream = mainSocket.getOutputStream();

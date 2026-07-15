@@ -41,7 +41,7 @@ public final class ExternalStream {
     device.address = address;
     device.adbPort = adbPort;
     device.serverPort = getInt(intent, "server-port", device.serverPort);
-    device.startApp = getString(intent, "start-app", device.startApp);
+    device.startApp = sanitizeStartApp(getString(intent, "start-app", device.startApp));
     device.listenClip = getBoolean(intent, "listen-clipboard", device.listenClip);
     device.isAudio = getBoolean(intent, "audio", device.isAudio);
     device.maxSize = getInt(intent, "max-size", device.maxSize);
@@ -164,6 +164,11 @@ public final class ExternalStream {
 
   private static void append(Uri.Builder builder, String key, Object value) {
     builder.appendQueryParameter(key, String.valueOf(value));
+  }
+
+  public static String sanitizeStartApp(String value) {
+    if (value == null || value.isEmpty()) return "";
+    return value.matches("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+") ? value : "";
   }
 
   private static void append(StringBuilder command, String key, String value) {

@@ -162,7 +162,7 @@ public final class Device {
     if (Device.needReset) {
       if (virtualDisplay != null) {
         int appStackId = getAppStackId();
-        if (appStackId == -1) Device.execReadOutput("am display move-stack " + appStackId + " " + Display.DEFAULT_DISPLAY);
+        if (appStackId != -1) Device.execReadOutput("am display move-stack " + appStackId + " " + Display.DEFAULT_DISPLAY);
         virtualDisplay.release();
       } else {
         if (Device.realSize != null) Device.execReadOutput("wm size " + Device.realSize.first + "x" + Device.realSize.second);
@@ -211,6 +211,7 @@ public final class Device {
       pointer = pointersState.newPointer(pointerId, SystemClock.uptimeMillis() - 50);
     }
 
+    if (pointer == null) return;
     pointer.x = x * displayInfo.width;
     pointer.y = y * displayInfo.height;
     int pointerCount = pointersState.update();
@@ -276,7 +277,7 @@ public final class Device {
   }
 
   public static String execReadOutput(String cmd) throws IOException, InterruptedException {
-    Process process = new ProcessBuilder().command("sh", "-c", cmd).start();
+    Process process = new ProcessBuilder().command("sh", "-c", cmd).redirectErrorStream(true).start();
     StringBuilder builder = new StringBuilder();
     String line;
     try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {

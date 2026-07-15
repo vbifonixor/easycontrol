@@ -11,6 +11,7 @@ import com.daitj.easycontrolfork.server.Server;
 import com.daitj.easycontrolfork.server.entity.Device;
 
 public final class ControlPacket {
+  private static final int MAX_CLIPBOARD_BYTES = 1024 * 1024;
   private static final UhidManager uhidManager = new UhidManager();
 
   public static void sendVideoEvent(long pts, ByteBuffer data) throws IOException {
@@ -76,6 +77,7 @@ public final class ControlPacket {
 
   public static void handleClipboardEvent() throws IOException {
     int size = Server.mainInputStream.readInt();
+    if (size < 0 || size > MAX_CLIPBOARD_BYTES) throw new IOException("Invalid clipboard size: " + size);
     byte[] textBytes = new byte[size];
     Server.mainInputStream.readFully(textBytes);
     String text = new String(textBytes, StandardCharsets.UTF_8);

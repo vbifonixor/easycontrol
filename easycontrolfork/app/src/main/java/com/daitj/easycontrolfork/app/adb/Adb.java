@@ -50,6 +50,10 @@ public class Adb {
       channel.close();
       throw new Exception("ADB连接失败");
     }
+    if (message.arg1 < 1 || message.arg1 > AdbProtocol.MAX_PAYLOAD_SIZE) {
+      channel.close();
+      throw new IOException("Invalid ADB max data: " + message.arg1);
+    }
     MAX_DATA = message.arg1;
     // 启动后台进程
     handleInThread.setPriority(Thread.MAX_PRIORITY);
@@ -91,10 +95,10 @@ public class Adb {
     // 发送文件
     byte[] byteArray = new byte[10240 - 8];
     int hasSendLen = 0;
-    int allNeedSendLen = file.available();
+    int allNeedSendLen = Math.max(file.available(), 1);
     int lastProcess = 0;
-    int len = file.read(byteArray, 0, byteArray.length);
-    do {
+    int len;
+    while ((len = file.read(byteArray, 0, byteArray.length)) != -1) {
       bufferStream.write(AdbProtocol.generateSyncHeader("DATA", len));
       bufferStream.write(ByteBuffer.wrap(byteArray, 0, len));
       hasSendLen += len;
@@ -103,8 +107,7 @@ public class Adb {
         lastProcess = newProcess;
         if (handleProcess != null) handleProcess.run(lastProcess);
       }
-      len = file.read(byteArray, 0, byteArray.length);
-    } while (len > 0);
+    }
     file.close();
     // 传输完成，为了方便，文件日期定为2024.1.1 0:0
     bufferStream.write(AdbProtocol.generateSyncHeader("DONE", 1704038400));

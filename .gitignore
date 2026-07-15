@@ -1,5 +1,10 @@
 keystore.properties
 
+*.jks
+
+.idea
+scrcpy
+
 easycontrolfork/*.iml
 easycontrolfork/.gradle
 easycontrolfork/.idea
@@ -13,4 +18,3 @@ easycontrolfork/app/src/main/res/raw/easycontrolfork_server.jar
 
 easycontrolfork/server/build
 easycontrolfork/server/.gradle
-

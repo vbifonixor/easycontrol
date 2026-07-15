@@ -24,7 +24,7 @@ import com.daitj.easycontrolfork.server.wrappers.SurfaceControl;
 public final class VideoEncode {
   private static MediaCodec encedec;
   private static MediaFormat encodecFormat;
-  public static boolean isHasChangeConfig = false;
+  public static volatile boolean isHasChangeConfig = false;
   private static boolean useH265;
 
   private static IBinder display;
@@ -51,7 +51,8 @@ public final class VideoEncode {
     encodecFormat.setString(MediaFormat.KEY_MIME, codecMime);
     encodecFormat.setInteger(MediaFormat.KEY_BIT_RATE, Options.maxVideoBit);
     encodecFormat.setInteger(MediaFormat.KEY_FRAME_RATE, Options.maxFps);
-    encodecFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 10);
+    // A short recovery interval lets a lagging receiver safely discard an old decode chain.
+    encodecFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) encodecFormat.setInteger(MediaFormat.KEY_INTRA_REFRESH_PERIOD, Options.maxFps * 3);
     encodecFormat.setFloat("max-fps-to-encoder", Options.maxFps);
     encodecFormat.setLong(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 50_000);
@@ -97,10 +98,17 @@ public final class VideoEncode {
       // 找到已完成的输出缓冲区
       int outIndex;
       do outIndex = encedec.dequeueOutputBuffer(bufferInfo, -1); while (outIndex < 0);
-      ByteBuffer buffer = encedec.getOutputBuffer(outIndex);
-      if (buffer == null) return;
-      ControlPacket.sendVideoEvent(bufferInfo.presentationTimeUs, buffer);
-      encedec.releaseOutputBuffer(outIndex, false);
+      try {
+        ByteBuffer buffer = encedec.getOutputBuffer(outIndex);
+        if (buffer == null) return;
+        if (bufferInfo.offset < 0 || bufferInfo.size < 0 || bufferInfo.offset > buffer.capacity() - bufferInfo.size) return;
+        buffer.position(bufferInfo.offset);
+        buffer.limit(bufferInfo.offset + bufferInfo.size);
+        ControlPacket.sendVideoEvent(bufferInfo.presentationTimeUs, bufferInfo.flags, buffer);
+      } finally {
+        // An encoder output buffer must always be returned, including empty/config buffers.
+        encedec.releaseOutputBuffer(outIndex, false);
+      }
     } catch (IllegalStateException ignored) {
     }
   }

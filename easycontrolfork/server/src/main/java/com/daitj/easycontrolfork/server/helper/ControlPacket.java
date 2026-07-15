@@ -14,12 +14,13 @@ public final class ControlPacket {
   private static final int MAX_CLIPBOARD_BYTES = 1024 * 1024;
   private static final UhidManager uhidManager = new UhidManager();
 
-  public static void sendVideoEvent(long pts, ByteBuffer data) throws IOException {
-    int size = data.remaining() + 8;
-    if (size < 8) return;
+  public static void sendVideoEvent(long pts, int flags, ByteBuffer data) throws IOException {
+    int size = data.remaining() + 12;
+    if (size < 12) return;
     ByteBuffer byteBuffer = ByteBuffer.allocate(4 + size);
     byteBuffer.putInt(size);
     byteBuffer.putLong(pts);
+    byteBuffer.putInt(flags);
     byteBuffer.put(data);
     byteBuffer.flip();
     Server.writeVideo(byteBuffer);

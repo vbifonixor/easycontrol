@@ -1,5 +1,24 @@
 # EasyControlFork
 
+## CI And Releases
+
+Pull requests build and lint a debug APK through GitHub Actions. The manually triggered **Android Release** workflow updates the app version, builds a signed APK, publishes an Obtainium-compatible GitHub Release, and attaches `SHA256SUMS.txt`.
+
+Before the first release, add these repository Actions secrets:
+
+- `ANDROID_KEYSTORE_BASE64`: Base64-encoded contents of the release keystore.
+- `ANDROID_KEYSTORE_PASSWORD`: Keystore password.
+- `ANDROID_KEY_ALIAS`: Signing key alias.
+- `ANDROID_KEY_PASSWORD`: Signing key password.
+
+Use the same release keystore for every published version. Android and Obtainium reject an update signed with a different key. On Windows, copy the Base64 value for `ANDROID_KEYSTORE_BASE64` with:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("easycontrol-release.jks")) | Set-Clipboard
+```
+
+Enable **Settings > Actions > General > Workflow permissions > Read and write permissions** so the workflow can commit the version bump, create a tag, and publish the release. Run **Actions > Android Release > Run workflow** from the branch you intend to release, providing a new version name and a strictly increasing Android version code. Obtainium can then use this repository's GitHub Releases source and install the APK asset from the latest release.
+
 ## External temporary stream
 
 `ExternalStreamActivity` is an exported gateway for connecting to a network device without creating or changing a saved device profile. It creates an in-memory temporary profile, connects immediately by default, and discards all changes when the stream closes.

@@ -32,6 +32,8 @@
 
   <!-- 设备添加页面 -->
   <string name="device_uuid">点击复制设备ID</string>
+  <string name="device_copy_deeplink">复制深度链接</string>
+  <string name="device_copy_termux">复制 Termux 命令</string>
   <string name="device_name">设备名称</string>
   <string name="device_name_hint">不可为空</string>
   <string name="device_address">地址</string>

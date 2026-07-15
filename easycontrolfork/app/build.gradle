@@ -4,7 +4,7 @@ plugins {
 
 def keystorePropertiesFile = rootProject.file('../keystore.properties')
 def keystoreProperties = new Properties()
-keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+if (keystorePropertiesFile.exists()) keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
 android {
   namespace 'com.daitj.easycontrolfork.app'
@@ -26,12 +26,14 @@ android {
   }
   
   signingConfigs {
-      release {
-          storeFile file(keystoreProperties['MY_KEYSTORE_FILE'])
-          storePassword keystoreProperties['MY_KEYSTORE_PASSWORD']
-          keyAlias keystoreProperties['MY_KEY_ALIAS']
-          keyPassword keystoreProperties['MY_KEY_PASSWORD']
-      }
+       release {
+           if (keystorePropertiesFile.exists()) {
+             storeFile rootProject.file(keystoreProperties['MY_KEYSTORE_FILE'])
+             storePassword keystoreProperties['MY_KEYSTORE_PASSWORD']
+             keyAlias keystoreProperties['MY_KEY_ALIAS']
+             keyPassword keystoreProperties['MY_KEY_PASSWORD']
+           }
+       }
   }
 
   buildTypes {
@@ -40,14 +42,14 @@ android {
       manifestPlaceholders = [app_name: "@string/app_name_dev", app_icon: "@mipmap/ic_launcher_dev", app_icon_round: "@mipmap/ic_launcher_dev_round"]
       debuggable true
     }
-    release {
+       release {
       buildConfigField "boolean", "ENABLE_DEBUG_FEATURE", "false"
       manifestPlaceholders = [app_name: "@string/app_name", app_icon: "@mipmap/ic_launcher", app_icon_round: "@mipmap/ic_launcher_round"]
       debuggable false
       minifyEnabled true
       shrinkResources true
       proguardFiles 'proguard-rules.pro'
-      signingConfig signingConfigs.release
+       if (keystorePropertiesFile.exists()) signingConfig signingConfigs.release
     }
   }
 

@@ -104,7 +104,7 @@ public final class VideoEncode {
         if (bufferInfo.offset < 0 || bufferInfo.size < 0 || bufferInfo.offset > buffer.capacity() - bufferInfo.size) return;
         buffer.position(bufferInfo.offset);
         buffer.limit(bufferInfo.offset + bufferInfo.size);
-        ControlPacket.sendVideoEvent(bufferInfo.presentationTimeUs, bufferInfo.flags, buffer);
+        ControlPacket.sendVideoEvent(bufferInfo.presentationTimeUs, buffer);
       } finally {
         // An encoder output buffer must always be returned, including empty/config buffers.
         encedec.releaseOutputBuffer(outIndex, false);

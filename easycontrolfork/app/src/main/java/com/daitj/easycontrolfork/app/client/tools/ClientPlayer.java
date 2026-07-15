@@ -7,7 +7,6 @@ import android.util.Pair;
 import android.view.Surface;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.ArrayBlockingQueue;
 
 import com.daitj.easycontrolfork.app.client.Client;
 import com.daitj.easycontrolfork.app.client.decode.AudioDecode;
@@ -20,9 +19,6 @@ public class ClientPlayer {
   private final ClientStream clientStream;
   private final Thread mainStreamInThread = new Thread(this::mainStreamIn);
   private final Thread videoStreamInThread = new Thread(this::videoStreamIn);
-  private Thread videoDecodeThread;
-  private final ArrayBlockingQueue<ByteBuffer> videoFrames = new ArrayBlockingQueue<>(2);
-  private final Object videoFramesLock = new Object();
   private Handler playHandler = null;
   private final HandlerThread playHandlerThread = new HandlerThread("easycontrol_play", Thread.MAX_PRIORITY);
   private static final int AUDIO_EVENT = 1;
@@ -80,46 +76,11 @@ public class ClientPlayer {
       ByteBuffer csd0 = clientStream.readFrameFromVideo();
       ByteBuffer csd1 = useH265 ? null : clientStream.readFrameFromVideo();
       videoDecode = new VideoDecode(videoSize, surface, csd0, csd1, playHandler);
-      VideoDecode decoder = videoDecode;
-      videoDecodeThread = new Thread(() -> decodeFrames(decoder), "easycontrol_video_decode");
-      videoDecodeThread.start();
-      while (!Thread.interrupted()) enqueueVideoFrame(clientStream.readFrameFromVideo(), decoder);
+      while (!Thread.interrupted()) videoDecode.decodeIn(clientStream.readFrameFromVideo());
     } catch (Exception ignored) {
     } finally {
-      if (videoDecodeThread != null) {
-        videoDecodeThread.interrupt();
-        try {
-          videoDecodeThread.join();
-        } catch (InterruptedException ignored) {
-          Thread.currentThread().interrupt();
-        }
-      }
       if (videoDecode != null) videoDecode.release();
       if (surface != null) surface.release();
-    }
-  }
-
-  private void decodeFrames(VideoDecode videoDecode) {
-    try {
-      while (!Thread.interrupted()) videoDecode.decodeIn(videoFrames.take());
-    } catch (InterruptedException ignored) {
-    }
-  }
-
-  private void enqueueVideoFrame(ByteBuffer frame, VideoDecode videoDecode) {
-    boolean keyFrame = frame.remaining() >= VideoDecode.FRAME_HEADER_SIZE
-        && (frame.getInt(frame.position() + 8) & android.media.MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0;
-    synchronized (videoFramesLock) {
-      if (videoFrames.offer(frame)) {
-        videoDecode.setLatestRequestedPts(frame.getLong(frame.position()));
-        return;
-      }
-      if (keyFrame) {
-        // A key frame starts an independent decode chain, so it can replace stale work safely.
-        videoFrames.clear();
-        videoFrames.offer(frame);
-        videoDecode.setLatestRequestedPts(frame.getLong(frame.position()));
-      }
     }
   }
 
@@ -128,7 +89,6 @@ public class ClientPlayer {
     isClose = true;
     mainStreamInThread.interrupt();
     videoStreamInThread.interrupt();
-    if (videoDecodeThread != null) videoDecodeThread.interrupt();
     playHandlerThread.quitSafely();
   }
 }

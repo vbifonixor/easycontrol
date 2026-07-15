@@ -7,11 +7,11 @@ def keystoreProperties = new Properties()
 keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
 android {
-  namespace 'com.daitj.easycontrolfork.app'
+  namespace 'com.vbifonix.easycontrolfork.app'
   compileSdk 34
 
   defaultConfig {
-    applicationId "com.daitj.easycontrolfork.app"
+    applicationId "com.vbifonix.easycontrolfork.app"
     minSdk 21
     targetSdk 34
     versionCode 10004

@@ -68,10 +68,11 @@ public class ClientPlayer {
 
   private void videoStreamIn() {
     VideoDecode videoDecode = null;
+    Surface surface = null;
     try {
       boolean useH265 = clientStream.readByteFromVideo() == 1;
       Pair<Integer, Integer> videoSize = new Pair<>(clientStream.readIntFromVideo(), clientStream.readIntFromVideo());
-      Surface surface = new Surface(clientController.getTextureView().getSurfaceTexture());
+      surface = new Surface(clientController.getTextureView().getSurfaceTexture());
       ByteBuffer csd0 = clientStream.readFrameFromVideo();
       ByteBuffer csd1 = useH265 ? null : clientStream.readFrameFromVideo();
       videoDecode = new VideoDecode(videoSize, surface, csd0, csd1, playHandler);
@@ -79,6 +80,7 @@ public class ClientPlayer {
     } catch (Exception ignored) {
     } finally {
       if (videoDecode != null) videoDecode.release();
+      if (surface != null) surface.release();
     }
   }
 
